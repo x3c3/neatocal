@@ -1340,14 +1340,18 @@ function ics_parse_datetime(value, params) {
   let match_date = value.match(/^(\d{4})(\d{2})(\d{2})$/);
   if (match_date) {
     is_all_day = true;
-    return {
-      date: new Date(
-        parseInt(match_date[1]),
-        parseInt(match_date[2]) - 1,
-        parseInt(match_date[3]),
-      ),
-      all_day: true,
-    };
+    let y = parseInt(match_date[1]);
+    let m = parseInt(match_date[2]) - 1;
+    let d = parseInt(match_date[3]);
+    let date = new Date(y, m, d);
+    if (
+      date.getFullYear() !== y ||
+      date.getMonth() !== m ||
+      date.getDate() !== d
+    ) {
+      return null;
+    }
+    return { date: date, all_day: true };
   }
 
   let match_dt = value.match(
@@ -1371,6 +1375,25 @@ function ics_parse_datetime(value, params) {
   let date = is_utc
     ? new Date(Date.UTC(year, month, day, hour, minute, second))
     : new Date(year, month, day, hour, minute, second);
+
+  // Validate that JS didn't overflow the date components
+  if (is_utc) {
+    if (
+      date.getUTCFullYear() !== year ||
+      date.getUTCMonth() !== month ||
+      date.getUTCDate() !== day
+    ) {
+      return null;
+    }
+  } else {
+    if (
+      date.getFullYear() !== year ||
+      date.getMonth() !== month ||
+      date.getDate() !== day
+    ) {
+      return null;
+    }
+  }
 
   return { date: date, all_day: is_all_day };
 }

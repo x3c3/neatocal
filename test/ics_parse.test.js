@@ -68,6 +68,28 @@ describe("ics_parse_datetime", () => {
     expect(result.date.getHours()).toBe(14);
     expect(result.date.getMinutes()).toBe(30);
   });
+
+  test("rejects invalid date-only overflow (Jan 32)", () => {
+    expect(ics_parse_datetime("20250132", "")).toBe(null);
+  });
+
+  test("rejects invalid month (month 13)", () => {
+    expect(ics_parse_datetime("20251301", "")).toBe(null);
+  });
+
+  test("rejects invalid datetime overflow (Feb 30)", () => {
+    expect(ics_parse_datetime("20250230T120000", "")).toBe(null);
+  });
+
+  test("accepts valid leap day", () => {
+    const result = ics_parse_datetime("20240229", "");
+    expect(result).not.toBe(null);
+    expect(result.date.getDate()).toBe(29);
+  });
+
+  test("rejects non-leap year Feb 29", () => {
+    expect(ics_parse_datetime("20250229", "")).toBe(null);
+  });
 });
 
 describe("ics_parse_events", () => {

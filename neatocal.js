@@ -24,6 +24,9 @@ SOFTWARE.
 
 */
 
+var MS_PER_DAY = 86400000;
+var RRULE_ITERATION_LIMIT = 200000;
+
 var NEATOCAL_PARAM = {
   // experiments with filling in data in cells
   //
@@ -336,6 +339,61 @@ function month_styles(month_ele) {
 }
 function year_styles(year_ele) {
   ele_styles(year_ele, "year");
+}
+
+function is_weekend(day_index) {
+  return NEATOCAL_PARAM.weekend_days.includes(day_index);
+}
+
+// Shared cell-rendering helper used by hallon_almanackan, default, and aligned_weekdays.
+// Options:
+//   td           - the <td> element to populate
+//   dt           - Date object for the cell
+//   day_label    - string to display as day number
+//   wd_code      - weekday code string (e.g. "M", "Tu")
+//   year, month, day - for render_cell_data and renderMoonPhase
+//   accent_color - optional inline color for weekend text (hallon only)
+//
+function render_day_cell(
+  td,
+  dt,
+  day_label,
+  wd_code,
+  year,
+  month,
+  day,
+  accent_color,
+) {
+  let span_date = H.span(day_label, "date");
+  let span_day = H.span(wd_code, "day");
+
+  date_styles(span_date);
+
+  if (is_weekend(dt.getDay())) {
+    if (accent_color) {
+      span_date.style.color = accent_color;
+      span_day.style.color = accent_color;
+    }
+    weekend_styles(span_day);
+    weekend_date_styles(span_date);
+  } else {
+    weekday_styles(span_day);
+  }
+
+  td.appendChild(span_date);
+  td.appendChild(span_day);
+
+  if (dt.getDay() == 1 && NEATOCAL_PARAM.show_week_numbers) {
+    let span_week_no = H.span(getISOWeekNumber(dt), "date");
+    span_week_no.style.float = NEATOCAL_PARAM.dir === "rtl" ? "left" : "right";
+    span_week_no.style.color = NEATOCAL_PARAM.week_number_color;
+    week_styles(span_week_no);
+    td.appendChild(span_week_no);
+  }
+
+  let yyyy_mm_dd = fmt_date(year, month + 1, day);
+  render_cell_data(td, yyyy_mm_dd);
+  renderMoonPhase(td, year, month, day);
 }
 
 function render_cell_data(td, yyyy_mm_dd) {
@@ -672,8 +730,6 @@ function neatocal_hallon_almanackan() {
       if (idx < nday_in_mo) {
         let dt = new Date(cur_year, cur_mo, idx + 1);
 
-        let d = NEATOCAL_PARAM.weekday_code[dt.getDay()];
-
         if (day_parity[i_mo][idx]) {
           td.classList.add("weekend");
         }
@@ -682,44 +738,17 @@ function neatocal_hallon_almanackan() {
           td.style.borderBottom = "0";
         }
 
-        let span_date = H.span((idx + 1).toString(), "date");
-        let span_day = H.span(d, "day");
-
-        // If any param specified stylings apply, apply them.
-        // Date stylings happen before weekend_date so that
-        // the weekend_date, if specified, can override
-        //
-
-        date_styles(span_date);
-
-        //if (dt.getDay() == 0) {
-        if (NEATOCAL_PARAM.weekend_days.includes(dt.getDay())) {
-          span_date.style.color = "rgb(230,37,7)";
-          span_day.style.color = "rgb(230,37,7)";
-          weekend_styles(span_day);
-          weekend_date_styles(span_date);
-        } else {
-          weekday_styles(span_day);
-        }
-
-        td.appendChild(span_date);
-        td.appendChild(span_day);
-
-        if (dt.getDay() == 1 && NEATOCAL_PARAM.show_week_numbers) {
-          let span_week_no = H.span(getISOWeekNumber(dt), "date");
-          span_week_no.style.float =
-            NEATOCAL_PARAM.dir === "rtl" ? "left" : "right";
-          span_week_no.style.color = NEATOCAL_PARAM.week_number_color;
-          week_styles(span_week_no);
-          td.appendChild(span_week_no);
-        }
-
-        let yyyy_mm_dd = fmt_date(cur_year, cur_mo + 1, idx + 1);
-        render_cell_data(td, yyyy_mm_dd);
-
-        // Add moon phase if enabled
-        //
-        renderMoonPhase(td, cur_year, cur_mo, idx + 1);
+        let d = NEATOCAL_PARAM.weekday_code[dt.getDay()];
+        render_day_cell(
+          td,
+          dt,
+          (idx + 1).toString(),
+          d,
+          cur_year,
+          cur_mo,
+          idx + 1,
+          "rgb(230,37,7)",
+        );
       }
       tr.appendChild(td);
     }
@@ -767,49 +796,20 @@ function neatocal_default() {
       if (idx < nday_in_mo) {
         let dt = new Date(cur_year, cur_mo, idx + 1);
 
-        let d = NEATOCAL_PARAM.weekday_code[dt.getDay()];
-
-        //if ((dt.getDay() == 0) ||
-        //    (dt.getDay() == 6)) {
-        if (NEATOCAL_PARAM.weekend_days.includes(dt.getDay())) {
+        if (is_weekend(dt.getDay())) {
           td.classList.add("weekend");
         }
 
-        let span_date = H.span((idx + 1).toString(), "date");
-        let span_day = H.span(d, "day");
-
-        // If any param specified stylings apply, apply them.
-        // Date stylings happen before weekend_date so that
-        // the weekend_date, if specified, can override
-        //
-
-        date_styles(span_date);
-
-        if (NEATOCAL_PARAM.weekend_days.includes(dt.getDay())) {
-          weekend_styles(span_day);
-          weekend_date_styles(span_date);
-        } else {
-          weekday_styles(span_day);
-        }
-
-        td.appendChild(span_date);
-        td.appendChild(span_day);
-
-        if (dt.getDay() == 1 && NEATOCAL_PARAM.show_week_numbers) {
-          let span_week_no = H.span(getISOWeekNumber(dt), "date");
-          span_week_no.style.float =
-            NEATOCAL_PARAM.dir === "rtl" ? "left" : "right";
-          span_week_no.style.color = NEATOCAL_PARAM.week_number_color;
-          week_styles(span_week_no);
-          td.appendChild(span_week_no);
-        }
-
-        let yyyy_mm_dd = fmt_date(cur_year, cur_mo + 1, idx + 1);
-        render_cell_data(td, yyyy_mm_dd);
-
-        // Add moon phase if enabled
-        //
-        renderMoonPhase(td, cur_year, cur_mo, idx + 1);
+        let d = NEATOCAL_PARAM.weekday_code[dt.getDay()];
+        render_day_cell(
+          td,
+          dt,
+          (idx + 1).toString(),
+          d,
+          cur_year,
+          cur_mo,
+          idx + 1,
+        );
       }
       tr.appendChild(td);
     }
@@ -850,7 +850,7 @@ function getISOWeekNumber(date) {
 
   // Calculate full weeks from year start to nearest Thursday
   //
-  return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  return Math.ceil(((d.getTime() - yearStart.getTime()) / MS_PER_DAY + 1) / 7);
 }
 
 function neatocal_aligned_weekdays() {
@@ -924,54 +924,20 @@ function neatocal_aligned_weekdays() {
       if (day_idx >= 0 && day_idx < nday_in_mo) {
         let dt = new Date(cur_year, cur_mo, day_idx + 1);
 
-        let wd_code = NEATOCAL_PARAM.weekday_code[dt.getDay()];
-
-        // If it's a weekend (Su,Sa), add the 'weekend' class to allow for highlighting
-        //
-        //if ((dt.getDay() == 0) ||
-        //    (dt.getDay() == 6)) {
-        if (NEATOCAL_PARAM.weekend_days.includes(dt.getDay())) {
+        if (is_weekend(dt.getDay())) {
           td.classList.add("weekend");
         }
 
-        // date - day in month
-        // day  - name of weekday (e.g. Su,M,T,W,R,F,Sa)
-        //
-        let span_date = H.span((day_idx + 1).toString(), "date");
-        let span_day = H.span(wd_code, "day");
-
-        // If any param specified stylings apply, apply them.
-        // Date stylings happen before weekend_date so that
-        // the weekend_date, if specified, can override
-        //
-
-        date_styles(span_date);
-
-        if (NEATOCAL_PARAM.weekend_days.includes(dt.getDay())) {
-          weekend_styles(span_day);
-          weekend_date_styles(span_date);
-        } else {
-          weekday_styles(span_day);
-        }
-
-        td.appendChild(span_date);
-        td.appendChild(span_day);
-
-        if (dt.getDay() == 1 && NEATOCAL_PARAM.show_week_numbers) {
-          let span_week_no = H.span(getISOWeekNumber(dt), "date");
-          span_week_no.style.float =
-            NEATOCAL_PARAM.dir === "rtl" ? "left" : "right";
-          span_week_no.style.color = NEATOCAL_PARAM.week_number_color;
-          week_styles(span_week_no);
-          td.appendChild(span_week_no);
-        }
-
-        let yyyy_mm_dd = fmt_date(cur_year, cur_mo + 1, day_idx + 1);
-        render_cell_data(td, yyyy_mm_dd);
-
-        // Add moon phase if enabled
-        //
-        renderMoonPhase(td, cur_year, cur_mo, day_idx + 1);
+        let wd_code = NEATOCAL_PARAM.weekday_code[dt.getDay()];
+        render_day_cell(
+          td,
+          dt,
+          (day_idx + 1).toString(),
+          wd_code,
+          cur_year,
+          cur_mo,
+          day_idx + 1,
+        );
       }
       tr.appendChild(td);
     }
@@ -1100,7 +1066,7 @@ function neatocal_weekly_grid() {
         let span_date = H.span(cd.toString(), "date");
         date_styles(span_date);
 
-        if (NEATOCAL_PARAM.weekend_days.includes(cday)) {
+        if (is_weekend(cday)) {
           weekend_date_styles(span_date);
         }
 
@@ -1489,7 +1455,7 @@ function ics_expand_event(
 
   if (!end_parsed) {
     if (all_day) {
-      end_date = new Date(start_date.getTime() + 86400000);
+      end_date = new Date(start_date.getTime() + MS_PER_DAY);
     }
   }
 
@@ -1510,7 +1476,7 @@ function ics_expand_event(
       end_date.getMinutes() === 0 &&
       end_date.getSeconds() === 0)
   ) {
-    end_day = new Date(end_day.getTime() - 86400000);
+    end_day = new Date(end_day.getTime() - MS_PER_DAY);
   }
 
   let view_start_day = new Date(
@@ -1518,7 +1484,7 @@ function ics_expand_event(
     view_start.getMonth(),
     view_start.getDate(),
   );
-  let view_end_last = new Date(view_end.getTime() - 86400000);
+  let view_end_last = new Date(view_end.getTime() - MS_PER_DAY);
 
   let cur = new Date(start_day.getTime());
   while (cur <= end_day) {
@@ -1603,7 +1569,7 @@ function ics_expand_rrule_event(
 
   let complex = byday || bymonthday || bymonth;
 
-  while (iter < 200000) {
+  while (iter < RRULE_ITERATION_LIMIT) {
     // Safeguard to prevent infinite loops
     iter++;
     if (until && current_date > until) break;
@@ -1615,13 +1581,13 @@ function ics_expand_rrule_event(
     if (complex) {
       if (freq === "DAILY") {
         let days_diff = Math.round(
-          (current_date.getTime() - start_parsed.date.getTime()) / 86400000,
+          (current_date.getTime() - start_parsed.date.getTime()) / MS_PER_DAY,
         );
         if (days_diff % interval !== 0) match = false;
       } else if (freq === "WEEKLY") {
         let start_day_offset = (start_parsed.date.getDay() - wkst + 7) % 7;
         let days_diff = Math.round(
-          (current_date.getTime() - start_parsed.date.getTime()) / 86400000,
+          (current_date.getTime() - start_parsed.date.getTime()) / MS_PER_DAY,
         );
         let weeks_diff = Math.floor((days_diff + start_day_offset) / 7);
         if (weeks_diff % interval !== 0) match = false;
@@ -1720,7 +1686,7 @@ function ics_expand_rrule_event(
     }
   }
 
-  if (iter >= 200000) {
+  if (iter >= RRULE_ITERATION_LIMIT) {
     console.warn(
       "RRULE expansion hit 200000 iteration limit for event:",
       event.summary || "(no title)",

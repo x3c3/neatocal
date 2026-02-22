@@ -54,4 +54,7 @@ dkms.conf
 *~
 *.swp
 
+node_modules/
+bun.lockb
+
 .*

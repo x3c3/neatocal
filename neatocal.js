@@ -781,7 +781,7 @@ function neatocal_default() {
 
         date_styles(span_date);
 
-        if (dt.getDay() == 0 || dt.getDay() == 6) {
+        if (NEATOCAL_PARAM.weekend_days.includes(dt.getDay())) {
           weekend_styles(span_day);
           weekend_date_styles(span_date);
         } else {
@@ -943,7 +943,7 @@ function neatocal_aligned_weekdays() {
 
         date_styles(span_date);
 
-        if (dt.getDay() == 0 || dt.getDay() == 6) {
+        if (NEATOCAL_PARAM.weekend_days.includes(dt.getDay())) {
           weekend_styles(span_day);
           weekend_date_styles(span_date);
         } else {

@@ -151,6 +151,10 @@ var NEATOCAL_PARAM = {
   //
   show_week_numbers: false,
 
+  // week number text color
+  //
+  week_number_color: "rgb(230,37,7)",
+
   font_family: "",
 
   // fiddly parameters
@@ -705,7 +709,7 @@ function neatocal_hallon_almanackan() {
           let span_week_no = H.span(getISOWeekNumber(dt), "date");
           span_week_no.style.float =
             NEATOCAL_PARAM.dir === "rtl" ? "left" : "right";
-          span_week_no.style.color = "rgb(230,37,7)";
+          span_week_no.style.color = NEATOCAL_PARAM.week_number_color;
           week_styles(span_week_no);
           td.appendChild(span_week_no);
         }
@@ -795,7 +799,7 @@ function neatocal_default() {
           let span_week_no = H.span(getISOWeekNumber(dt), "date");
           span_week_no.style.float =
             NEATOCAL_PARAM.dir === "rtl" ? "left" : "right";
-          span_week_no.style.color = "rgb(230,37,7)";
+          span_week_no.style.color = NEATOCAL_PARAM.week_number_color;
           week_styles(span_week_no);
           td.appendChild(span_week_no);
         }
@@ -957,7 +961,7 @@ function neatocal_aligned_weekdays() {
           let span_week_no = H.span(getISOWeekNumber(dt), "date");
           span_week_no.style.float =
             NEATOCAL_PARAM.dir === "rtl" ? "left" : "right";
-          span_week_no.style.color = "rgb(230,37,7)";
+          span_week_no.style.color = NEATOCAL_PARAM.week_number_color;
           week_styles(span_week_no);
           td.appendChild(span_week_no);
         }
@@ -1120,7 +1124,7 @@ function neatocal_weekly_grid() {
       td_wn.style.width = "4%";
 
       let span_week_no = H.span(getISOWeekNumber(week_number_date), "date");
-      span_week_no.style.color = "rgb(230,37,7)";
+      span_week_no.style.color = NEATOCAL_PARAM.week_number_color;
       week_styles(span_week_no);
       td_wn.appendChild(span_week_no);
       tr.appendChild(td_wn);
@@ -1225,6 +1229,7 @@ function neatocal_override_param(param, data) {
     "moon_phase_display",
 
     "show_week_numbers",
+    "week_number_color",
 
     "font_family",
 
@@ -2039,6 +2044,7 @@ function neatocal_init() {
   let month_format_param = sp.get("month_format");
   let language_param = sp.get("language");
   let show_week_numbers_param = sp.get("show_week_numbers");
+  let week_number_color_param = sp.get("week_number_color");
   let font_family_param = sp.get("font_family");
   let ics_param = sp.get("ics");
 
@@ -2292,6 +2298,10 @@ function neatocal_init() {
     typeof show_week_numbers_param !== "undefined"
   ) {
     NEATOCAL_PARAM.show_week_numbers = show_week_numbers_param === "true";
+  }
+
+  if (week_number_color_param != null) {
+    NEATOCAL_PARAM.week_number_color = week_number_color_param;
   }
 
   if (font_family_param != null) {

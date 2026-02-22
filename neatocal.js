@@ -1696,6 +1696,13 @@ function ics_expand_rrule_event(
       }
     }
   }
+
+  if (iter >= 200000) {
+    console.warn(
+      "RRULE expansion hit 200000 iteration limit for event:",
+      event.summary || "(no title)",
+    );
+  }
 }
 
 function ics_import_text(raw, color, text_color, source_id) {

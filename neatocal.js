@@ -1194,6 +1194,7 @@ function loadXHR(url, _cb, _errcb) {
 
 function neatocal_parse_data_error(raw) {
   console.log("error:", raw);
+  neatocal_render();
 }
 
 function neatocal_override_param(param, data) {
@@ -1299,9 +1300,9 @@ function neatocal_parse_data(raw) {
       neatocal_render();
     }
 
-    // default to render
+    // default to render on 404 or any other non-200 status
     //
-    if (raw.target.readyState == 4 && raw.target.status == 404) {
+    if (raw.target.readyState == 4 && raw.target.status !== 200) {
       neatocal_render();
     }
   }

@@ -1863,7 +1863,15 @@ function ics_remove_calendar(source_id) {
   neatocal_render();
 }
 
+var _active_palette_closer = null;
+
 function render_ics_legend() {
+  // Clean up any active palette close handler from a previous render
+  if (_active_palette_closer) {
+    window.removeEventListener("click", _active_palette_closer);
+    _active_palette_closer = null;
+  }
+
   let legend = document.getElementById("ics_legend");
   if (!legend) {
     return;
@@ -1923,9 +1931,15 @@ function render_ics_legend() {
 
       function close_palette() {
         window.removeEventListener("click", close_palette);
+        _active_palette_closer = null;
         render_ics_legend();
       }
 
+      // Remove any previously active closer before adding a new one
+      if (_active_palette_closer) {
+        window.removeEventListener("click", _active_palette_closer);
+      }
+      _active_palette_closer = close_palette;
       window.addEventListener("click", close_palette);
       swatch.replaceWith(palette);
     });

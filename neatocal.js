@@ -397,7 +397,7 @@ function render_cell_data(td, yyyy_mm_dd) {
 
   if (typeof val === "string") {
     let txt = H.div();
-    txt.innerHTML = val;
+    txt.textContent = val;
     txt.style.textAlign = "center";
     txt.style.fontWeight = "300";
     td.appendChild(txt);
@@ -415,7 +415,7 @@ function render_cell_data(td, yyyy_mm_dd) {
     //
     if (typeof item === "string") {
       let txt = H.div();
-      txt.innerHTML = item;
+      txt.textContent = item;
       txt.style.textAlign = "center";
       txt.style.fontWeight = "300";
       td.appendChild(txt);
@@ -502,13 +502,6 @@ function getMoonPhase(lunarAge) {
   let phase = Math.round((lunarAge / 29.53058867) * 8) % 8;
 
   return phase;
-}
-
-function getMoonIllumination(lunarAge) {
-  // Returns illumination percentage 0-100
-  let cycle = 29.53058867;
-  let percent = ((1 - Math.cos((lunarAge / cycle) * 2 * Math.PI)) / 2) * 100;
-  return Math.round(percent);
 }
 
 function getMoonPhaseName(phase) {
@@ -1708,14 +1701,6 @@ function ics_import_text(raw, color, text_color, source_id) {
         view.end,
       );
     }
-  }
-}
-
-function ics_reset_data() {
-  if (NEATOCAL_PARAM.data?.__base) {
-    data_set_base(NEATOCAL_PARAM.data.__base);
-  } else {
-    data_set_base({});
   }
 }
 

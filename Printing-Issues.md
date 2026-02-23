@@ -15,7 +15,7 @@ Use the browser `Print` command.
 Often this is the `Ctrl + P` or `(⌘) + P` or can be accessed via a dropdown
 menu.
 
-![Print Dropdown Menu](img/nc_print_dd.png)
+![Print Dropdown Menu](img/print-dropdown.png)
 
 ### How Do I Print in Larger Sizes?
 
@@ -25,7 +25,7 @@ independent of any parameters explicitly set by NeatoCal.
 As such, paper size, orientation, and other options, can be chosen from the
 print options menu when printing.
 
-![Print Option Menu](img/nc_print_opt.png)
+![Print Option Menu](img/print-options.png)
 
 ### Printing Produces Multiple Pages
 
@@ -50,7 +50,7 @@ globally by changing it manually from Chrome DevTools. This can be done by:
 - Navigate to the **Styles** tab on the right
 - In `element.style`, set the zoom level to something smaller (e.g. `85%`)
 
-![Chrome DevTools element.style zoom parameter](img/SO_SU_q979741_cc-by-sa-andre-chalella.png)
+![Chrome DevTools element.style zoom parameter](img/chrome-devtools-zoom.png)
 
 The above fix was taken from a
 [Stack Overflow SuperUser question](https://superuser.com/questions/979741/how-can-i-make-chrome-shrink-to-fit-on-printing).

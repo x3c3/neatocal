@@ -13,13 +13,13 @@ Printing probelms? See [printing issues](Printing-Issues.md).
 
 ## Screenshots
 
-[![default](img/neatocal_default.png)](https://abetusk.github.io/neatocal)
+[![default](img/layout-default.png)](https://abetusk.github.io/neatocal)
 
-[![aligned](img/neatocal_align.png)](https://abetusk.github.io/neatocal?layout=aligned-weekdays)
+[![aligned](img/layout-aligned-weekdays.png)](https://abetusk.github.io/neatocal?layout=aligned-weekdays)
 
-[![hallon almanackan](img/neatocal_ha.png)](https://abetusk.github.io/neatocal?layout=hallon-almanackan)
+[![hallon almanackan](img/layout-hallon-almanackan.png)](https://abetusk.github.io/neatocal?layout=hallon-almanackan)
 
-[![weekly grid](img/neatocal_wg.png)](https://abetusk.github.io/neatocal?layout=weekly-grid)
+[![weekly grid](img/layout-weekly-grid.png)](https://abetusk.github.io/neatocal?layout=weekly-grid)
 
 ## Parameters
 
@@ -165,7 +165,7 @@ You can drop one or more `.ics` calendar files onto the page to import events on
 the fly. Imported events are displayed in each day cell, and multi-day events
 render as a new entry each day
 
-![ICS drag-n-drop import video demo](img/neatocal_ics_dnd.gif)
+![ICS drag-n-drop import video demo](img/ics-drag-and-drop.gif)
 
 Using the `ics` URL parameter will make the drag-and-drop interface appear on
 initial load and disappear after an ICS file is loaded.

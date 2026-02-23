@@ -45,6 +45,7 @@ const PARAM_DEFAULTS = {
   moon_phase_position: "below",
   moon_phase_display: "changes",
   show_week_numbers: false,
+  week_number_color: "rgb(230,37,7)",
   font_family: "",
   year_font_size: undefined,
   year_font_weight: undefined,

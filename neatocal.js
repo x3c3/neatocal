@@ -504,7 +504,7 @@ function getMoonPhase(lunarAge) {
   return phase;
 }
 
-function _getMoonIllumination(lunarAge) {
+function getMoonIllumination(lunarAge) {
   // Returns illumination percentage 0-100
   let cycle = 29.53058867;
   let percent = ((1 - Math.cos((lunarAge / cycle) * 2 * Math.PI)) / 2) * 100;
@@ -1532,7 +1532,9 @@ function ics_expand_rrule_event(
 
   let freq = rules.FREQ;
   let interval = parseInt(rules.INTERVAL, 10) || 1;
-  let until = rules.UNTIL ? ics_parse_datetime(rules.UNTIL, "").date : null;
+  let until = rules.UNTIL
+    ? (ics_parse_datetime(rules.UNTIL, "")?.date ?? null)
+    : null;
   let count = rules.COUNT ? parseInt(rules.COUNT, 10) : null;
 
   let byday = rules.BYDAY ? rules.BYDAY.split(",") : null;
@@ -1709,7 +1711,7 @@ function ics_import_text(raw, color, text_color, source_id) {
   }
 }
 
-function _ics_reset_data() {
+function ics_reset_data() {
   if (NEATOCAL_PARAM.data?.__base) {
     data_set_base(NEATOCAL_PARAM.data.__base);
   } else {
@@ -2017,7 +2019,7 @@ function neatocal_setup_ics_drop() {
   }
 }
 
-function _neatocal_init() {
+function neatocal_init() {
   let sp = new URLSearchParams(window.location.search);
 
   // peel off parameters from URL

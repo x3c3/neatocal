@@ -56,5 +56,8 @@ dkms.conf
 
 node_modules/
 bun.lockb
+bun.lock
 
 .*
+!.gitignore
+!.prettierrc

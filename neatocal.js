@@ -229,26 +229,18 @@ function data_set_base(data) {
 // simple HTML convenience functions
 //
 var H = {
-  text: function (txt) {
-    return document.createTextNode(txt);
-  },
-  div: function () {
-    return document.createElement("div");
-  },
-  tr: function () {
-    return document.createElement("tr");
-  },
-  th: function (v) {
+  text: (txt) => document.createTextNode(txt),
+  div: () => document.createElement("div"),
+  tr: () => document.createElement("tr"),
+  th: (v) => {
     let th = document.createElement("th");
     if (typeof v !== "undefined") {
       th.innerHTML = v;
     }
     return th;
   },
-  td: function () {
-    return document.createElement("td");
-  },
-  span: function (v, _class) {
+  td: () => document.createElement("td"),
+  span: (v, _class) => {
     let s = document.createElement("span");
     if (typeof v !== "undefined") {
       s.innerHTML = v;
@@ -297,12 +289,12 @@ function ele_styles(ele, _type) {
 
   let _t = "";
   for (let i = 0; i < valid_type.length; i++) {
-    if (valid_type[i] == _type) {
+    if (valid_type[i] === _type) {
       _t = valid_type[i];
       break;
     }
   }
-  if (_t == "") {
+  if (_t === "") {
     return;
   }
 
@@ -383,7 +375,7 @@ function render_day_cell(
   td.appendChild(span_date);
   td.appendChild(span_day);
 
-  if (dt.getDay() == 1 && NEATOCAL_PARAM.show_week_numbers) {
+  if (dt.getDay() === 1 && NEATOCAL_PARAM.show_week_numbers) {
     let span_week_no = H.span(getISOWeekNumber(dt), "date");
     span_week_no.style.float = NEATOCAL_PARAM.dir === "rtl" ? "left" : "right";
     span_week_no.style.color = NEATOCAL_PARAM.week_number_color;
@@ -512,7 +504,7 @@ function getMoonPhase(lunarAge) {
   return phase;
 }
 
-function getMoonIllumination(lunarAge) {
+function _getMoonIllumination(lunarAge) {
   // Returns illumination percentage 0-100
   let cycle = 29.53058867;
   let percent = ((1 - Math.cos((lunarAge / cycle) * 2 * Math.PI)) / 2) * 100;
@@ -542,7 +534,7 @@ function getMoonPhaseSymbol(phase) {
 //
 var MOON_PHASE_COUNTER = 0;
 
-function createMoonPhaseCSS(phase, lunarAge) {
+function createMoonPhaseCSS(phase, _lunarAge) {
   // Create an inline SVG moon phase visualization with unique mask IDs
   //
   let span = H.span("", "moon-phase");
@@ -646,7 +638,7 @@ function renderMoonPhase(td, year, month, day) {
 
 function localized_day(locale, day_idx) {
   let iday = 17 + day_idx;
-  let s = "1995-12-" + iday.toString() + "T12:00:01Z";
+  let s = `1995-12-${iday.toString()}T12:00:01Z`;
   let d = new Date(s);
   return d.toLocaleDateString(locale, {
     weekday: NEATOCAL_PARAM.weekday_format,
@@ -655,8 +647,8 @@ function localized_day(locale, day_idx) {
 
 function localized_month(locale, mo_idx) {
   let imo = 1 + mo_idx;
-  let imo_str = imo < 10 ? "0" + imo.toString() : imo.toString();
-  let s = "1995-" + imo_str + "-18T12:00:01Z";
+  let imo_str = imo < 10 ? `0${imo.toString()}` : imo.toString();
+  let s = `1995-${imo_str}-18T12:00:01Z`;
   let d = new Date(s);
   return d.toLocaleDateString(locale, { month: NEATOCAL_PARAM.month_format });
 }
@@ -681,7 +673,7 @@ function neatocal_hallon_almanackan() {
   let week_parity = 0;
   let day_parity = {};
   for (let i_mo = start_mo; i_mo < start_mo + n_mo; i_mo++) {
-    let cur_year = parseInt(year) + Math.floor(i_mo / 12);
+    let cur_year = parseInt(year, 10) + Math.floor(i_mo / 12);
     let cur_mo = i_mo % 12;
     let nday_in_mo = new Date(cur_year, cur_mo + 1, 0).getDate();
 
@@ -697,7 +689,7 @@ function neatocal_hallon_almanackan() {
       day_parity[i_mo][day_idx] = week_parity;
 
       let dt = new Date(cur_year, cur_mo, day_idx + 1);
-      if (dt.getDay() == 0) {
+      if (dt.getDay() === 0) {
         week_parity = 1 - week_parity;
       }
     }
@@ -709,23 +701,23 @@ function neatocal_hallon_almanackan() {
     if (
       typeof NEATOCAL_PARAM.cell_height !== "undefined" &&
       NEATOCAL_PARAM.cell_height != null &&
-      NEATOCAL_PARAM.cell_height != ""
+      NEATOCAL_PARAM.cell_height !== ""
     ) {
       tr.style.height = NEATOCAL_PARAM.cell_height;
     }
 
     let cur_year = year;
     for (let i_mo = start_mo; i_mo < start_mo + n_mo; i_mo++) {
-      cur_year = parseInt(year) + Math.floor(i_mo / 12);
+      cur_year = parseInt(year, 10) + Math.floor(i_mo / 12);
 
       let cur_mo = i_mo % 12;
 
       let nday_in_mo = new Date(cur_year, cur_mo + 1, 0).getDate();
 
       let td = H.td();
-      td.style.width = (100 / n_mo).toString() + "%";
+      td.style.width = `${(100 / n_mo).toString()}%`;
 
-      td.id = "ui_" + fmt_date(cur_year, cur_mo + 1, idx + 1);
+      td.id = `ui_${fmt_date(cur_year, cur_mo + 1, idx + 1)}`;
 
       if (idx < nday_in_mo) {
         let dt = new Date(cur_year, cur_mo, idx + 1);
@@ -734,7 +726,7 @@ function neatocal_hallon_almanackan() {
           td.classList.add("weekend");
         }
 
-        if (dt.getDay() != 0 || idx == nday_in_mo - 1) {
+        if (dt.getDay() !== 0 || idx === nday_in_mo - 1) {
           td.style.borderBottom = "0";
         }
 
@@ -776,22 +768,22 @@ function neatocal_default() {
     if (
       typeof NEATOCAL_PARAM.cell_height !== "undefined" &&
       NEATOCAL_PARAM.cell_height != null &&
-      NEATOCAL_PARAM.cell_height != ""
+      NEATOCAL_PARAM.cell_height !== ""
     ) {
       tr.style.height = NEATOCAL_PARAM.cell_height;
     }
 
     let cur_year = year;
     for (let i_mo = start_mo; i_mo < start_mo + n_mo; i_mo++) {
-      cur_year = parseInt(year) + Math.floor(i_mo / 12);
+      cur_year = parseInt(year, 10) + Math.floor(i_mo / 12);
 
       let cur_mo = i_mo % 12;
 
       let nday_in_mo = new Date(cur_year, cur_mo + 1, 0).getDate();
 
       let td = H.td();
-      td.style.width = (100 / n_mo).toString() + "%";
-      td.id = "ui_" + fmt_date(cur_year, cur_mo + 1, idx + 1);
+      td.style.width = `${(100 / n_mo).toString()}%`;
+      td.id = `ui_${fmt_date(cur_year, cur_mo + 1, idx + 1)}`;
 
       if (idx < nday_in_mo) {
         let dt = new Date(cur_year, cur_mo, idx + 1);
@@ -819,11 +811,11 @@ function neatocal_default() {
 }
 
 function fmt_date(y, m, d) {
-  let res = y.toString() + "-";
+  let res = `${y.toString()}-`;
   if (m < 10) {
     res += "0";
   }
-  res += m.toString() + "-";
+  res += `${m.toString()}-`;
   if (d < 10) {
     res += "0";
   }
@@ -854,9 +846,9 @@ function getISOWeekNumber(date) {
 }
 
 function neatocal_aligned_weekdays() {
-  let year = parseInt(NEATOCAL_PARAM.year);
-  let start_mo = parseInt(NEATOCAL_PARAM.start_month);
-  let n_mo = parseInt(NEATOCAL_PARAM.n_month);
+  let year = parseInt(NEATOCAL_PARAM.year, 10);
+  let start_mo = parseInt(NEATOCAL_PARAM.start_month, 10);
+  let n_mo = parseInt(NEATOCAL_PARAM.n_month, 10);
 
   let ui_tr_mo = document.getElementById("ui_tr_month_name");
   ui_tr_mo.innerHTML = "";
@@ -878,7 +870,7 @@ function neatocal_aligned_weekdays() {
     day_in_mo_start.push(0);
   }
   for (let i_mo = start_mo; i_mo < start_mo + n_mo; i_mo++) {
-    let cur_year = parseInt(year) + Math.floor(i_mo / 12);
+    let cur_year = parseInt(year, 10) + Math.floor(i_mo / 12);
     let cur_mo = i_mo % 12;
     let s = new Date(cur_year, cur_mo, 1).getDay();
     day_in_mo_start[i_mo - start_mo] = s;
@@ -894,14 +886,14 @@ function neatocal_aligned_weekdays() {
     if (
       typeof NEATOCAL_PARAM.cell_height !== "undefined" &&
       NEATOCAL_PARAM.cell_height != null &&
-      NEATOCAL_PARAM.cell_height != ""
+      NEATOCAL_PARAM.cell_height !== ""
     ) {
       tr.style.height = NEATOCAL_PARAM.cell_height;
     }
 
     let cur_year = year;
     for (let i_mo = start_mo; i_mo < start_mo + n_mo; i_mo++) {
-      cur_year = parseInt(year) + Math.floor(i_mo / 12);
+      cur_year = parseInt(year, 10) + Math.floor(i_mo / 12);
 
       // cur_mo is the month in the current year
       // nday_in_mo is the number of days in the month under consideration
@@ -915,8 +907,8 @@ function neatocal_aligned_weekdays() {
         idx - ((day_in_mo_start[i_mo - start_mo] - start_day + 7) % 7);
 
       let td = H.td();
-      td.style.width = (100 / n_mo).toString() + "%";
-      td.id = "ui_" + fmt_date(cur_year, cur_mo + 1, day_idx + 1);
+      td.style.width = `${(100 / n_mo).toString()}%`;
+      td.id = `ui_${fmt_date(cur_year, cur_mo + 1, day_idx + 1)}`;
 
       // if our day falls within bounds, we decorate the td with the appropriate
       // values
@@ -947,10 +939,10 @@ function neatocal_aligned_weekdays() {
 }
 
 function neatocal_weekly_grid() {
-  let year = parseInt(NEATOCAL_PARAM.year);
-  let start_mo = parseInt(NEATOCAL_PARAM.start_month);
-  let n_mo = parseInt(NEATOCAL_PARAM.n_month);
-  let start_day = parseInt(NEATOCAL_PARAM.start_day);
+  let year = parseInt(NEATOCAL_PARAM.year, 10);
+  let start_mo = parseInt(NEATOCAL_PARAM.start_month, 10);
+  let n_mo = parseInt(NEATOCAL_PARAM.n_month, 10);
+  let start_day = parseInt(NEATOCAL_PARAM.start_day, 10);
 
   let ui_tr_mo = document.getElementById("ui_tr_month_name");
   ui_tr_mo.innerHTML = "";
@@ -996,7 +988,7 @@ function neatocal_weekly_grid() {
     if (
       typeof NEATOCAL_PARAM.cell_height !== "undefined" &&
       NEATOCAL_PARAM.cell_height != null &&
-      NEATOCAL_PARAM.cell_height != ""
+      NEATOCAL_PARAM.cell_height !== ""
     ) {
       tr.style.height = NEATOCAL_PARAM.cell_height;
     }
@@ -1057,7 +1049,7 @@ function neatocal_weekly_grid() {
           td.style.borderBottom = "1.15px solid #333";
         }
 
-        td.id = "ui_" + fmt_date(cy, cm + 1, cd);
+        td.id = `ui_${fmt_date(cy, cm + 1, cd)}`;
 
         if (cm % 2 === 1) {
           td.classList.add("weekend");
@@ -1115,7 +1107,7 @@ function neatocal_post_process() {
       today.getMonth() + 1,
       today.getDate(),
     );
-    let today_ele = document.getElementById("ui_" + today_str);
+    let today_ele = document.getElementById(`ui_${today_str}`);
     if (today_ele) {
       today_ele.style.background = NEATOCAL_PARAM.today_highlight_color;
     }
@@ -1125,7 +1117,7 @@ function neatocal_post_process() {
     let color_cell = NEATOCAL_PARAM.color_cell;
 
     for (let i = 0; i < color_cell.length; i++) {
-      let ele = document.getElementById("ui_" + color_cell[i].date);
+      let ele = document.getElementById(`ui_${color_cell[i].date}`);
       if (typeof ele === "undefined" || ele == null) {
         continue;
       }
@@ -1137,7 +1129,7 @@ function neatocal_post_process() {
     if (
       typeof navigator !== "undefined" &&
       typeof navigator.userAgent !== "undefined" &&
-      navigator.userAgent.search(/^Mozilla/) == 0 &&
+      navigator.userAgent.search(/^Mozilla/) === 0 &&
       typeof screen !== "undefined" &&
       screen.width < 768
     ) {
@@ -1255,8 +1247,8 @@ function neatocal_override_param(param, data) {
 }
 
 function neatocal_parse_data(raw) {
-  if (raw.type == "loadend") {
-    if (raw.target.readyState == 4 && raw.target.status == 200) {
+  if (raw.type === "loadend") {
+    if (raw.target.readyState === 4 && raw.target.status === 200) {
       try {
         let json_data = JSON.parse(raw.target.response);
         data_set_base(json_data);
@@ -1273,7 +1265,7 @@ function neatocal_parse_data(raw) {
 
     // default to render on 404 or any other non-200 status
     //
-    if (raw.target.readyState == 4 && raw.target.status !== 200) {
+    if (raw.target.readyState === 4 && raw.target.status !== 200) {
       neatocal_render();
     }
   }
@@ -1306,9 +1298,9 @@ function ics_parse_datetime(value, params) {
   let match_date = value.match(/^(\d{4})(\d{2})(\d{2})$/);
   if (match_date) {
     is_all_day = true;
-    let y = parseInt(match_date[1]);
-    let m = parseInt(match_date[2]) - 1;
-    let d = parseInt(match_date[3]);
+    let y = parseInt(match_date[1], 10);
+    let m = parseInt(match_date[2], 10) - 1;
+    let d = parseInt(match_date[3], 10);
     let date = new Date(y, m, d);
     if (
       date.getFullYear() !== y ||
@@ -1331,12 +1323,12 @@ function ics_parse_datetime(value, params) {
     is_utc = true;
   }
 
-  let year = parseInt(match_dt[1]);
-  let month = parseInt(match_dt[2]) - 1;
-  let day = parseInt(match_dt[3]);
-  let hour = parseInt(match_dt[4]);
-  let minute = parseInt(match_dt[5]);
-  let second = match_dt[6] ? parseInt(match_dt[6]) : 0;
+  let year = parseInt(match_dt[1], 10);
+  let month = parseInt(match_dt[2], 10) - 1;
+  let day = parseInt(match_dt[3], 10);
+  let hour = parseInt(match_dt[4], 10);
+  let minute = parseInt(match_dt[5], 10);
+  let second = match_dt[6] ? parseInt(match_dt[6], 10) : 0;
 
   let date = is_utc
     ? new Date(Date.UTC(year, month, day, hour, minute, second))
@@ -1451,7 +1443,7 @@ function ics_expand_event(
 
   let start_date = start_parsed.date;
   let end_date = end_parsed ? end_parsed.date : new Date(start_date.getTime());
-  let all_day = start_parsed.all_day || (end_parsed && end_parsed.all_day);
+  let all_day = start_parsed.all_day || end_parsed?.all_day;
 
   if (!end_parsed) {
     if (all_day) {
@@ -1538,20 +1530,16 @@ function ics_expand_rrule_event(
     if (kv.length === 2) rules[kv[0]] = kv[1];
   });
 
-  let freq = rules["FREQ"];
-  let interval = parseInt(rules["INTERVAL"]) || 1;
-  let until = rules["UNTIL"]
-    ? ics_parse_datetime(rules["UNTIL"], "").date
-    : null;
-  let count = rules["COUNT"] ? parseInt(rules["COUNT"]) : null;
+  let freq = rules.FREQ;
+  let interval = parseInt(rules.INTERVAL, 10) || 1;
+  let until = rules.UNTIL ? ics_parse_datetime(rules.UNTIL, "").date : null;
+  let count = rules.COUNT ? parseInt(rules.COUNT, 10) : null;
 
-  let byday = rules["BYDAY"] ? rules["BYDAY"].split(",") : null;
-  let bymonthday = rules["BYMONTHDAY"]
-    ? rules["BYMONTHDAY"].split(",").map(Number)
+  let byday = rules.BYDAY ? rules.BYDAY.split(",") : null;
+  let bymonthday = rules.BYMONTHDAY
+    ? rules.BYMONTHDAY.split(",").map(Number)
     : null;
-  let bymonth = rules["BYMONTH"]
-    ? rules["BYMONTH"].split(",").map(Number)
-    : null;
+  let bymonth = rules.BYMONTH ? rules.BYMONTH.split(",").map(Number) : null;
 
   let duration = 0;
   let end_parsed = null;
@@ -1565,7 +1553,7 @@ function ics_expand_rrule_event(
   let occurrences = 0;
   let iter = 0;
   let day_map = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
-  let wkst = rules["WKST"] ? day_map[rules["WKST"]] : 1;
+  let wkst = rules.WKST ? day_map[rules.WKST] : 1;
 
   let complex = byday || bymonthday || bymonth;
 
@@ -1620,7 +1608,7 @@ function ics_expand_rrule_event(
               has_day_match = true;
               break;
             }
-            let n = parseInt(prefix);
+            let n = parseInt(prefix, 10);
             let is_match = false;
             let d = current_date.getDate();
             if (n > 0) {
@@ -1721,8 +1709,8 @@ function ics_import_text(raw, color, text_color, source_id) {
   }
 }
 
-function ics_reset_data() {
-  if (NEATOCAL_PARAM.data && NEATOCAL_PARAM.data.__base) {
+function _ics_reset_data() {
+  if (NEATOCAL_PARAM.data?.__base) {
     data_set_base(NEATOCAL_PARAM.data.__base);
   } else {
     data_set_base({});
@@ -1767,7 +1755,7 @@ function ics_handle_files(file_list) {
   let reads = files.map((file, idx) => {
     return new Promise((resolve) => {
       let reader = new FileReader();
-      reader.onload = function () {
+      reader.onload = () => {
         resolve({ text: reader.result, idx: idx });
       };
       reader.readAsText(file);
@@ -1782,7 +1770,7 @@ function ics_handle_files(file_list) {
       let file = files[results[i].idx];
       let label = file
         ? file.name.replace(/\.ics$/i, "")
-        : "Calendar " + (import_id + 1).toString();
+        : `Calendar ${(import_id + 1).toString()}`;
 
       NEATOCAL_PARAM.ics_imports.push({
         id: import_id,
@@ -1801,9 +1789,7 @@ function ics_handle_files(file_list) {
 
 function ics_remove_calendar(source_id) {
   NEATOCAL_PARAM.ics_imports = NEATOCAL_PARAM.ics_imports.filter(
-    function (item) {
-      return item.id !== source_id;
-    },
+    (item) => item.id !== source_id,
   );
 
   let keys = Object.keys(NEATOCAL_PARAM.data);
@@ -1814,9 +1800,7 @@ function ics_remove_calendar(source_id) {
     let val = NEATOCAL_PARAM.data[key];
     if (!Array.isArray(val)) continue;
 
-    let filtered_val = val.filter(function (event) {
-      return event.source_id !== source_id;
-    });
+    let filtered_val = val.filter((event) => event.source_id !== source_id);
 
     if (filtered_val.length === 0) {
       delete NEATOCAL_PARAM.data[key];
@@ -1862,10 +1846,10 @@ function render_ics_legend() {
     }
     swatch.dataset.id = item.id.toString();
 
-    swatch.addEventListener("click", function (e) {
+    swatch.addEventListener("click", (e) => {
       e.stopPropagation();
       let id = parseInt(e.target.dataset.id, 10);
-      if (isNaN(id)) {
+      if (Number.isNaN(id)) {
         return;
       }
 
@@ -1880,10 +1864,10 @@ function render_ics_legend() {
         opt.dataset.id = id.toString();
         opt.dataset.bg = ICS_PALETTE[p].bg;
         opt.dataset.fg = ICS_PALETTE[p].fg;
-        opt.addEventListener("click", function (ev) {
+        opt.addEventListener("click", (ev) => {
           ev.stopPropagation();
           let _id = parseInt(ev.target.dataset.id, 10);
-          if (isNaN(_id)) {
+          if (Number.isNaN(_id)) {
             return;
           }
           ics_update_style(_id, ev.target.dataset.bg, ev.target.dataset.fg);
@@ -1891,7 +1875,7 @@ function render_ics_legend() {
         palette.appendChild(opt);
       }
 
-      palette.addEventListener("click", function (ev) {
+      palette.addEventListener("click", (ev) => {
         ev.stopPropagation();
       });
 
@@ -1915,9 +1899,9 @@ function render_ics_legend() {
     name.textContent = item.name;
     name.dataset.idx = i.toString();
 
-    name.addEventListener("click", function (e) {
+    name.addEventListener("click", (e) => {
       let idx = parseInt(e.target.dataset.idx, 10);
-      if (isNaN(idx)) {
+      if (Number.isNaN(idx)) {
         return;
       }
 
@@ -1935,7 +1919,7 @@ function render_ics_legend() {
       }
 
       input.addEventListener("blur", commit);
-      input.addEventListener("keydown", function (ev) {
+      input.addEventListener("keydown", (ev) => {
         if (ev.key === "Enter") {
           commit();
         }
@@ -1955,10 +1939,10 @@ function render_ics_legend() {
     remove_btn.title = "Remove calendar";
     remove_btn.dataset.id = item.id.toString();
 
-    remove_btn.addEventListener("click", function (e) {
+    remove_btn.addEventListener("click", (e) => {
       e.stopPropagation();
       let id = parseInt(e.target.dataset.id, 10);
-      if (!isNaN(id)) {
+      if (!Number.isNaN(id)) {
         ics_remove_calendar(id);
       }
     });
@@ -1987,17 +1971,17 @@ function neatocal_setup_ics_drop() {
     overlay.classList.remove("visible");
   }
 
-  window.addEventListener("dragenter", function (e) {
+  window.addEventListener("dragenter", (e) => {
     e.preventDefault();
     drag_counter += 1;
     show();
   });
 
-  window.addEventListener("dragover", function (e) {
+  window.addEventListener("dragover", (e) => {
     e.preventDefault();
   });
 
-  window.addEventListener("dragleave", function (e) {
+  window.addEventListener("dragleave", (e) => {
     e.preventDefault();
     drag_counter -= 1;
     if (drag_counter <= 0) {
@@ -2006,20 +1990,20 @@ function neatocal_setup_ics_drop() {
     }
   });
 
-  window.addEventListener("drop", function (e) {
+  window.addEventListener("drop", (e) => {
     e.preventDefault();
     drag_counter = 0;
     hide();
-    if (e.dataTransfer && e.dataTransfer.files) {
+    if (e.dataTransfer?.files) {
       ics_handle_files(e.dataTransfer.files);
     }
   });
 
-  overlay.addEventListener("click", function () {
+  overlay.addEventListener("click", () => {
     input.click();
   });
 
-  input.addEventListener("change", function () {
+  input.addEventListener("change", () => {
     if (input.files) {
       ics_handle_files(input.files);
       input.value = "";
@@ -2033,7 +2017,7 @@ function neatocal_setup_ics_drop() {
   }
 }
 
-function neatocal_init() {
+function _neatocal_init() {
   let sp = new URLSearchParams(window.location.search);
 
   // peel off parameters from URL
@@ -2088,7 +2072,7 @@ function neatocal_init() {
   ];
   for (let i_p = 0; i_p < _ele_pfx.length; i_p++) {
     for (let i_s = 0; i_s < _ele_sfx.length; i_s++) {
-      let _ele_name = _ele_pfx[i_p] + "_" + _ele_sfx[i_s];
+      let _ele_name = `${_ele_pfx[i_p]}_${_ele_sfx[i_s]}`;
       let _ele_param = sp.get(_ele_name);
 
       if (_ele_param != null) {
@@ -2129,15 +2113,15 @@ function neatocal_init() {
   let layout = NEATOCAL_PARAM.layout;
   if (layout_param != null) {
     _l = sp.get("layout");
-    if (_l == "default") {
+    if (_l === "default") {
       layout = "default";
-    } else if (_l == "aligned-weekdays") {
+    } else if (_l === "aligned-weekdays") {
       layout = "aligned-weekdays";
-    } else if (_l == "hallon-almanackan") {
+    } else if (_l === "hallon-almanackan") {
       layout = "hallon-almanackan";
       NEATOCAL_PARAM.show_week_numbers = true;
       NEATOCAL_PARAM.weekend_days = [0];
-    } else if (_l == "weekly-grid") {
+    } else if (_l === "weekly-grid") {
       layout = "weekly-grid";
     }
   }
@@ -2147,8 +2131,8 @@ function neatocal_init() {
 
   let start_month = NEATOCAL_PARAM.start_month;
   if (start_month_param != null) {
-    start_month = parseInt(start_month_param);
-    if (isNaN(start_month)) {
+    start_month = parseInt(start_month_param, 10);
+    if (Number.isNaN(start_month)) {
       start_month = 0;
     }
   }
@@ -2158,8 +2142,8 @@ function neatocal_init() {
 
   let n_month = NEATOCAL_PARAM.n_month;
   if (n_month_param != null) {
-    n_month = parseInt(n_month_param);
-    if (isNaN(n_month) || n_month <= 0) {
+    n_month = parseInt(n_month_param, 10);
+    if (Number.isNaN(n_month) || n_month <= 0) {
       n_month = 12;
     }
   }
@@ -2169,8 +2153,8 @@ function neatocal_init() {
 
   let start_day = NEATOCAL_PARAM.start_day;
   if (start_day_param != null) {
-    start_day = parseInt(start_day_param);
-    if (isNaN(start_day)) {
+    start_day = parseInt(start_day_param, 10);
+    if (Number.isNaN(start_day)) {
       start_day = 0;
     }
   }
@@ -2182,7 +2166,7 @@ function neatocal_init() {
   if (highlight_color_param != null) {
     highlight_color = highlight_color_param;
     if (highlight_color.match(/^[\da-fA-F]+/)) {
-      highlight_color = "#" + highlight_color;
+      highlight_color = `#${highlight_color}`;
     }
   }
   NEATOCAL_PARAM.highlight_color = highlight_color;
@@ -2193,7 +2177,7 @@ function neatocal_init() {
   if (today_highlight_color_param != null) {
     today_highlight_color = today_highlight_color_param;
     if (today_highlight_color.match(/^[\da-fA-F]+/)) {
-      today_highlight_color = "#" + today_highlight_color;
+      today_highlight_color = `#${today_highlight_color}`;
     }
   }
   NEATOCAL_PARAM.today_highlight_color = today_highlight_color;
@@ -2287,9 +2271,9 @@ function neatocal_init() {
   // thanks to https://github.com/fawaz-alesayi/neatocal
   //
   if (weekend_days_param != null) {
-    let days = weekend_days_param.split(",").map((d) => parseInt(d.trim()));
+    let days = weekend_days_param.split(",").map((d) => parseInt(d.trim(), 10));
     NEATOCAL_PARAM.weekend_days = days.filter(
-      (d) => !isNaN(d) && d >= 0 && d <= 6,
+      (d) => !Number.isNaN(d) && d >= 0 && d <= 6,
     );
   }
 
@@ -2392,15 +2376,15 @@ function neatocal_init() {
 function neatocal_render() {
   document.documentElement.style.fontFamily = NEATOCAL_PARAM.font_family;
 
-  if (NEATOCAL_PARAM.dir != null && NEATOCAL_PARAM.dir != "") {
+  if (NEATOCAL_PARAM.dir != null && NEATOCAL_PARAM.dir !== "") {
     document.documentElement.dir = NEATOCAL_PARAM.dir;
   }
 
   let cur_start_month = NEATOCAL_PARAM.start_month;
   let month_remain = NEATOCAL_PARAM.n_month;
-  let s_year = parseInt(NEATOCAL_PARAM.year);
+  let s_year = parseInt(NEATOCAL_PARAM.year, 10);
   let e_year =
-    parseInt(NEATOCAL_PARAM.year) +
+    parseInt(NEATOCAL_PARAM.year, 10) +
     Math.floor((cur_start_month + month_remain - 1) / 12);
 
   let layout = NEATOCAL_PARAM.layout;
@@ -2435,11 +2419,11 @@ function neatocal_render() {
   for (let y = s_year, idx = 0; y <= e_year; y++, idx++) {
     let span = H.span();
     span.innerHTML = y.toString();
-    span.style["display"] = "inline-block";
-    span.style["width"] = (100 * year_fraction[idx]).toString() + "%";
+    span.style.display = "inline-block";
+    span.style.width = `${(100 * year_fraction[idx]).toString()}%`;
     span.style["justify-content"] = "center";
     span.style["text-align"] = "center";
-    span.style["margin"] = "0 0 .5em 0";
+    span.style.margin = "0 0 .5em 0";
 
     year_styles(span);
 
@@ -2450,11 +2434,11 @@ function neatocal_render() {
   let ui_tbody = document.getElementById("ui_tbody");
   ui_tbody.innerHTML = "";
 
-  if (layout == "aligned-weekdays") {
+  if (layout === "aligned-weekdays") {
     neatocal_aligned_weekdays();
-  } else if (layout == "hallon-almanackan") {
+  } else if (layout === "hallon-almanackan") {
     neatocal_hallon_almanackan();
-  } else if (layout == "weekly-grid") {
+  } else if (layout === "weekly-grid") {
     neatocal_weekly_grid();
   } else {
     neatocal_default();

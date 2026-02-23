@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 
 const { nc, resetParam } = require("./helpers");
 const { data_clone_base, data_set_base, NEATOCAL_PARAM } = nc;

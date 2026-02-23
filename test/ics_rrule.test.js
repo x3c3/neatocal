@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 
 const { nc, resetParam } = require("./helpers");
 const { ics_expand_rrule_event, NEATOCAL_PARAM } = nc;
@@ -11,7 +11,7 @@ beforeEach(() => {
   nc.data_set_base({});
 });
 
-function countDatesWithEvents() {
+function _countDatesWithEvents() {
   return Object.keys(NEATOCAL_PARAM.data).filter(
     (k) => k !== "__base" && NEATOCAL_PARAM.data[k] !== undefined,
   ).length;

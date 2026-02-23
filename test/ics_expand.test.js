@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 
 const { nc, resetParam } = require("./helpers");
 const { ics_expand_event, add_event_to_date, get_view_range, NEATOCAL_PARAM } =

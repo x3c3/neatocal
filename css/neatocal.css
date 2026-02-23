@@ -40,10 +40,11 @@ SOFTWARE.
 }
 
 html {
-  font-family: 'Oswald';
+  font-family: "Oswald";
 }
 
-html, body {
+html,
+body {
   height: 100%;
   margin: 0;
   padding: 0;
@@ -66,15 +67,16 @@ table {
   width: 100%;
   height: calc(100% - 4em);
   border-collapse: separate;
-  border-spacing: .5em 0;
+  border-spacing: 0.5em 0;
 }
 
-td, th {
+td,
+th {
   font-weight: normal;
   text-transform: uppercase;
   border-bottom: 1px solid #888;
-  padding: .3vmin .3vmin;
-  font-size: .9vmin;
+  padding: 0.3vmin 0.3vmin;
+  font-size: 0.9vmin;
   font-weight: 300;
   color: #000;
 }
@@ -108,7 +110,7 @@ td:empty {
 }
 
 p {
-  margin: 0 0 .5em 0;
+  margin: 0 0 0.5em 0;
   text-align: center;
 }
 
@@ -118,7 +120,7 @@ p {
 }
 
 #ui_info {
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
   position: absolute;
   top: 0;
   left: 0;
@@ -126,9 +128,9 @@ p {
   width: calc(100% - 6em);
   background: #333;
   color: #eee;
-  padding: 1em 1em .5em 1em;
+  padding: 1em 1em 0.5em 1em;
   font-size: 2vmax;
-  border-radius: .2em;
+  border-radius: 0.2em;
 }
 #ui_info p {
   text-align: left;
@@ -174,7 +176,7 @@ p {
 }
 
 .event {
-  font-size: .7vmin;
+  font-size: 0.7vmin;
   line-height: 1.2;
   margin-top: 0.2em;
   padding: 0.05em 0.3em;
@@ -316,7 +318,9 @@ p {
   padding: 0 0.2em;
   margin-left: -0.2em;
   opacity: 0.6;
-  transition: opacity 0.2s, color 0.2s;
+  transition:
+    opacity 0.2s,
+    color 0.2s;
   margin-top: 0.15em;
 }
 

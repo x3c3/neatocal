@@ -7,7 +7,7 @@ Here's a [live demo](https://abetusk.github.io/neatocal).
 
 This is a JavaScript port of the very awesome [Neatnik's Calendar](https://www.neatnik.net/calendar/) project, with added parameters (see below) and designed to be "dependency free" with all files local.
 
-Printing probelms? See [printing issues](Printing-Issues.md).
+Printing problems? See [printing issues](Printing-Issues.md).
 
 
 Screenshots

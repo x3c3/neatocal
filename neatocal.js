@@ -1315,6 +1315,62 @@ function ics_parse_datetime(value, params) {
   return { date: date, all_day: is_all_day };
 }
 
+// RFC 5545 3.3.11: TEXT values escape backslash, comma, semicolon and newline.
+//
+function ics_unescape_text(value) {
+  return value.replace(/\\(.)/g, function(_, c) {
+    if ((c === "n") || (c === "N")) { return " "; }
+    return c;
+  });
+}
+
+// RFC 5545 3.3.6 duration (subset: weeks/days/hours/minutes/seconds).
+// Returns milliseconds or null if unparseable.
+//
+function ics_parse_duration(value) {
+  let m = value.match(/^([+-])?P(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/);
+  if (!m) { return null; }
+  let sign = (m[1] === "-") ? -1 : 1;
+  let weeks   = parseInt(m[2] || "0");
+  let days    = parseInt(m[3] || "0");
+  let hours   = parseInt(m[4] || "0");
+  let minutes = parseInt(m[5] || "0");
+  let seconds = parseInt(m[6] || "0");
+  return sign * ((((((weeks * 7) + days) * 24 + hours) * 60 + minutes) * 60 + seconds) * 1000);
+}
+
+// Flatten an event's EXDATE properties (each possibly holding a
+// comma-separated list) into parsed {date, all_day} entries.
+//
+function ics_parse_exdates(event) {
+  let out = [];
+  if (!event.exdate) { return out; }
+  for (let i = 0; i < event.exdate.length; i++) {
+    let vals = event.exdate[i].value.split(",");
+    for (let j = 0; j < vals.length; j++) {
+      let parsed = ics_parse_datetime(vals[j].trim(), event.exdate[i].params);
+      if (parsed) { out.push(parsed); }
+    }
+  }
+  return out;
+}
+
+function ics_date_excluded(date, excluded) {
+  for (let i = 0; i < excluded.length; i++) {
+    let x = excluded[i];
+    if (x.all_day) {
+      if ((x.date.getFullYear() === date.getFullYear()) &&
+          (x.date.getMonth() === date.getMonth()) &&
+          (x.date.getDate() === date.getDate())) {
+        return true;
+      }
+    } else if (x.date.getTime() === date.getTime()) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function ics_parse_events(raw) {
   let lines = ics_unfold_lines(raw);
   let events = [];
@@ -1345,7 +1401,7 @@ function ics_parse_events(raw) {
     let params = parts.slice(1).join(";");
 
     if (name === "SUMMARY") {
-      current.summary = value;
+      current.summary = ics_unescape_text(value);
     } else if (name === "DTSTART") {
       current.dtstart = { value: value, params: params };
     } else if (name === "DTEND") {
@@ -1354,6 +1410,13 @@ function ics_parse_events(raw) {
       current.rrule = value;
     } else if (name === "DURATION") {
       current.duration = value;
+    } else if (name === "UID") {
+      current.uid = value;
+    } else if (name === "RECURRENCE-ID") {
+      current.recurrence_id = { value: value, params: params };
+    } else if (name === "EXDATE") {
+      if (!current.exdate) { current.exdate = []; }
+      current.exdate.push({ value: value, params: params });
     }
   }
 
@@ -1369,10 +1432,17 @@ function ics_text_color_for_index(idx) {
 }
 
 function ics_expand_event(event, color, text_color, source_id, view_start, view_end) {
-  if (!event.dtstart) { return; }
+  if (!event.dtstart) {
+    console.warn("neatocal ics: skipping event with no DTSTART:", event.summary || "(no title)");
+    return;
+  }
 
   let start_parsed = event._parsed_start || ics_parse_datetime(event.dtstart.value, event.dtstart.params);
-  if (!start_parsed) { return; }
+  if (!start_parsed) {
+    console.warn("neatocal ics: skipping event with unparseable DTSTART \"" +
+      event.dtstart.value + "\":", event.summary || "(no title)");
+    return;
+  }
 
   let end_parsed = null;
   if (event._parsed_end) {
@@ -1386,7 +1456,10 @@ function ics_expand_event(event, color, text_color, source_id, view_start, view_
   let all_day = start_parsed.all_day || (end_parsed && end_parsed.all_day);
 
   if (!end_parsed) {
-    if (all_day) {
+    let dur_ms = event.duration ? ics_parse_duration(event.duration) : null;
+    if ((dur_ms !== null) && (dur_ms > 0)) {
+      end_date = new Date(start_date.getTime() + dur_ms);
+    } else if (all_day) {
       end_date = new Date(start_date.getTime() + 86400000);
     }
   }
@@ -1426,42 +1499,110 @@ function ics_expand_event(event, color, text_color, source_id, view_start, view_
   }
 }
 
-function ics_expand_rrule_event(event, color, text_color, source_id, view_start, view_end) {
+// Expand a recurring event into individual occurrences within the view range.
+// Walks day by day from DTSTART and tests each date against the rule
+// (RFC 5545 3.3.10): the frequency/interval phase, the BYxxx filters present,
+// and — for parts absent from the rule — constraints implied by DTSTART.
+// Testing day-of-month membership (rather than adding months) means invalid
+// dates like Feb 31 are skipped instead of overflowing into the next month.
+// `override_dates` holds parsed RECURRENCE-ID values of instances that other
+// VEVENTs replace; like EXDATEs, they count toward COUNT but don't render.
+//
+function ics_expand_rrule_event(event, color, text_color, source_id, view_start, view_end, override_dates) {
+  if (!event.dtstart) {
+    console.warn("neatocal ics: skipping recurring event with no DTSTART:", event.summary || "(no title)");
+    return;
+  }
   let start_parsed = ics_parse_datetime(event.dtstart.value, event.dtstart.params);
-  if (!start_parsed) return;
+  if (!start_parsed) {
+    console.warn("neatocal ics: skipping event with unparseable DTSTART \"" +
+      event.dtstart.value + "\":", event.summary || "(no title)");
+    return;
+  }
+  if (!event.rrule) { return; }
 
   let rules = {};
-  if (!event.rrule) return;
   event.rrule.split(';').forEach(p => {
     let kv = p.split('=');
     if (kv.length === 2) rules[kv[0]] = kv[1];
   });
 
   let freq = rules['FREQ'];
+  if ((freq !== 'DAILY') && (freq !== 'WEEKLY') && (freq !== 'MONTHLY') && (freq !== 'YEARLY')) {
+    console.warn("neatocal ics: unsupported RRULE FREQ \"" + freq + "\", rendering start date only:",
+      event.summary || "(no title)");
+    ics_expand_event(Object.assign({}, event, { rrule: null }), color, text_color, source_id, view_start, view_end);
+    return;
+  }
+
   let interval = parseInt(rules['INTERVAL']) || 1;
-  let until = rules['UNTIL'] ? ics_parse_datetime(rules['UNTIL'], "").date : null;
   let count = rules['COUNT'] ? parseInt(rules['COUNT']) : null;
+
+  let until = null;
+  if (rules['UNTIL']) {
+    let until_parsed = ics_parse_datetime(rules['UNTIL'], "");
+    if (until_parsed) {
+      until = until_parsed.date;
+    } else {
+      console.warn("neatocal ics: ignoring unparseable UNTIL \"" + rules['UNTIL'] + "\":",
+        event.summary || "(no title)");
+    }
+  }
 
   let byday = rules['BYDAY'] ? rules['BYDAY'].split(',') : null;
   let bymonthday = rules['BYMONTHDAY'] ? rules['BYMONTHDAY'].split(',').map(Number) : null;
   let bymonth = rules['BYMONTH'] ? rules['BYMONTH'].split(',').map(Number) : null;
 
+  let day_map = {"SU":0, "MO":1, "TU":2, "WE":3, "TH":4, "FR":5, "SA":6};
+  let wkst = (rules['WKST'] in day_map) ? day_map[rules['WKST']] : 1;
+
+  // Parts not in the rule are derived from DTSTART (RFC 5545 3.3.10).
+  //
+  let implied_month = null;
+  let implied_monthday = null;
+  let implied_weekday = null;
+  if ((freq === 'YEARLY') && !bymonth) {
+    implied_month = start_parsed.date.getMonth() + 1;
+  }
+  if (((freq === 'YEARLY') || (freq === 'MONTHLY')) && !bymonthday && !byday) {
+    implied_monthday = start_parsed.date.getDate();
+  }
+  if ((freq === 'WEEKLY') && !byday) {
+    implied_weekday = start_parsed.date.getDay();
+  }
+
   let duration = 0;
   let end_parsed = null;
   if (event.dtend) {
     end_parsed = ics_parse_datetime(event.dtend.value, event.dtend.params);
-    if (end_parsed) duration = end_parsed.date.getTime() - start_parsed.date.getTime();
+    if (end_parsed) { duration = end_parsed.date.getTime() - start_parsed.date.getTime(); }
+  } else if (event.duration) {
+    let dur_ms = ics_parse_duration(event.duration);
+    if ((dur_ms !== null) && (dur_ms > 0)) { duration = dur_ms; }
   }
 
+  let excluded = ics_parse_exdates(event);
+  if (override_dates) { excluded = excluded.concat(override_dates); }
+
   let current_date = new Date(start_parsed.date.getTime());
+
+  // Without COUNT there is no need to walk occurrences that end before the
+  // view: jump the scan to just before view_start (keeping DTSTART's
+  // time-of-day so phase computations against DTSTART stay day-aligned).
+  //
+  if (count === null) {
+    let span_days = Math.max(0, Math.ceil(duration / 86400000)) + 1;
+    let ff = new Date(view_start.getTime() - span_days * 86400000);
+    ff = new Date(ff.getFullYear(), ff.getMonth(), ff.getDate(),
+      start_parsed.date.getHours(), start_parsed.date.getMinutes(), start_parsed.date.getSeconds());
+    if (ff > current_date) { current_date = ff; }
+  }
+
   let occurrences = 0;
   let iter = 0;
-  let day_map = {"SU":0, "MO":1, "TU":2, "WE":3, "TH":4, "FR":5, "SA":6};
-  let wkst = rules['WKST'] ? day_map[rules['WKST']] : 1; 
+  let iter_cap = 200000; // Safeguard to prevent infinite loops
 
-  let complex = byday || bymonthday || bymonth;
-
-  while (iter < 200000) { // Safeguard to prevent infinite loops
+  while (iter < iter_cap) {
     iter++;
     if (until && current_date > until) break;
     if (count !== null && occurrences >= count) break;
@@ -1469,87 +1610,92 @@ function ics_expand_rrule_event(event, color, text_color, source_id, view_start,
 
     let match = true;
 
-    if (complex) {
-      if (freq === 'DAILY') {
-        let days_diff = Math.round((current_date.getTime() - start_parsed.date.getTime()) / 86400000);
-        if (days_diff % interval !== 0) match = false;
-      } else if (freq === 'WEEKLY') {
-        let start_day_offset = (start_parsed.date.getDay() - wkst + 7) % 7;
-        let days_diff = Math.round((current_date.getTime() - start_parsed.date.getTime()) / 86400000);
-        let weeks_diff = Math.floor((days_diff + start_day_offset) / 7);
-        if (weeks_diff % interval !== 0) match = false;
-      } else if (freq === 'MONTHLY') {
-        let months_diff = (current_date.getFullYear() - start_parsed.date.getFullYear()) * 12 + (current_date.getMonth() - start_parsed.date.getMonth());
-        if (months_diff % interval !== 0) match = false;
-      } else if (freq === 'YEARLY') {
-        let years_diff = current_date.getFullYear() - start_parsed.date.getFullYear();
-        if (years_diff % interval !== 0) match = false;
-      }
+    if (freq === 'DAILY') {
+      let days_diff = Math.round((current_date.getTime() - start_parsed.date.getTime()) / 86400000);
+      if (days_diff % interval !== 0) match = false;
+    } else if (freq === 'WEEKLY') {
+      let start_day_offset = (start_parsed.date.getDay() - wkst + 7) % 7;
+      let days_diff = Math.round((current_date.getTime() - start_parsed.date.getTime()) / 86400000);
+      let weeks_diff = Math.floor((days_diff + start_day_offset) / 7);
+      if (weeks_diff % interval !== 0) match = false;
+    } else if (freq === 'MONTHLY') {
+      let months_diff = (current_date.getFullYear() - start_parsed.date.getFullYear()) * 12 + (current_date.getMonth() - start_parsed.date.getMonth());
+      if (months_diff % interval !== 0) match = false;
+    } else if (freq === 'YEARLY') {
+      let years_diff = current_date.getFullYear() - start_parsed.date.getFullYear();
+      if (years_diff % interval !== 0) match = false;
+    }
 
-      if (bymonth && !bymonth.includes(current_date.getMonth() + 1)) match = false;
-      if (bymonthday && !bymonthday.includes(current_date.getDate())) match = false;
-      
-      if (byday) {
-        let d_str = Object.keys(day_map).find(key => day_map[key] === current_date.getDay());
-        let has_day_match = false;
-        for (let i = 0; i < byday.length; i++) {
-          let bd = byday[i];
-          if (bd.endsWith(d_str)) {
-            let prefix = bd.replace(/[A-Z]+$/, '');
-            if (!prefix) {
-              has_day_match = true;
-              break;
-            }
-            let n = parseInt(prefix);
-            let is_match = false;
-            let d = current_date.getDate();
-            if (n > 0) {
-              is_match = Math.ceil(d / 7) === n;
-            } else if (n < 0) {
-              let days_in_month = new Date(current_date.getFullYear(), current_date.getMonth() + 1, 0).getDate();
-              is_match = Math.ceil((days_in_month - d + 1) / 7) === Math.abs(n);
-            }
-            if (is_match) {
-              has_day_match = true;
-              break;
-            }
+    if (match && bymonth && !bymonth.includes(current_date.getMonth() + 1)) match = false;
+    if (match && (implied_month !== null) && ((current_date.getMonth() + 1) !== implied_month)) match = false;
+
+    if (match && bymonthday) {
+      let d = current_date.getDate();
+      let days_in_month = new Date(current_date.getFullYear(), current_date.getMonth() + 1, 0).getDate();
+      let md_match = false;
+      for (let i = 0; i < bymonthday.length; i++) {
+        let n = bymonthday[i];
+        if ((n > 0) ? (d === n) : (d === days_in_month + 1 + n)) {
+          md_match = true;
+          break;
+        }
+      }
+      if (!md_match) match = false;
+    }
+    if (match && (implied_monthday !== null) && (current_date.getDate() !== implied_monthday)) match = false;
+    if (match && (implied_weekday !== null) && (current_date.getDay() !== implied_weekday)) match = false;
+
+    if (match && byday) {
+      let d_str = Object.keys(day_map).find(key => day_map[key] === current_date.getDay());
+      let has_day_match = false;
+      for (let i = 0; i < byday.length; i++) {
+        let bd = byday[i];
+        if (bd.endsWith(d_str)) {
+          let prefix = bd.replace(/[A-Z]+$/, '');
+          if (!prefix) {
+            has_day_match = true;
+            break;
+          }
+          let n = parseInt(prefix);
+          let is_match = false;
+          let d = current_date.getDate();
+          if (n > 0) {
+            is_match = Math.ceil(d / 7) === n;
+          } else if (n < 0) {
+            let days_in_month = new Date(current_date.getFullYear(), current_date.getMonth() + 1, 0).getDate();
+            is_match = Math.ceil((days_in_month - d + 1) / 7) === Math.abs(n);
+          }
+          if (is_match) {
+            has_day_match = true;
+            break;
           }
         }
-        if (!has_day_match) match = false;
       }
-    } else {
-      match = true;
+      if (!has_day_match) match = false;
     }
 
     if (match) {
-      let ev_end = new Date(current_date.getTime() + duration);
-      if (ev_end >= view_start && current_date <= view_end) {
-        let synth = Object.assign({}, event);
-        delete synth.rrule;
-        synth._parsed_start = { date: new Date(current_date.getTime()), all_day: start_parsed.all_day };
-        if (end_parsed) {
-          synth._parsed_end = { date: ev_end, all_day: end_parsed.all_day };
-        }
-        ics_expand_event(synth, color, text_color, source_id, view_start, view_end);
-      }
       occurrences++;
+      if (!ics_date_excluded(current_date, excluded)) {
+        let ev_end = new Date(current_date.getTime() + duration);
+        if (ev_end >= view_start && current_date <= view_end) {
+          let synth = Object.assign({}, event);
+          delete synth.rrule;
+          synth._parsed_start = { date: new Date(current_date.getTime()), all_day: start_parsed.all_day };
+          if (end_parsed) {
+            synth._parsed_end = { date: ev_end, all_day: end_parsed.all_day };
+          }
+          ics_expand_event(synth, color, text_color, source_id, view_start, view_end);
+        }
+      }
     }
 
-    if (complex) {
-      current_date.setDate(current_date.getDate() + 1);
-    } else {
-      if (freq === 'DAILY') {
-        current_date.setDate(current_date.getDate() + interval);
-      } else if (freq === 'WEEKLY') {
-        current_date.setDate(current_date.getDate() + 7 * interval);
-      } else if (freq === 'MONTHLY') {
-        current_date.setMonth(current_date.getMonth() + interval);
-      } else if (freq === 'YEARLY') {
-        current_date.setFullYear(current_date.getFullYear() + interval);
-      } else {
-        break;
-      }
-    }
+    current_date.setDate(current_date.getDate() + 1);
+  }
+
+  if (iter >= iter_cap) {
+    console.warn("neatocal ics: recurrence expansion hit iteration cap, event may be truncated:",
+      event.summary || "(no title)");
   }
 }
 
@@ -1557,11 +1703,34 @@ function ics_import_text(raw, color, text_color, source_id) {
   let events = ics_parse_events(raw);
   let view = get_view_range();
 
+  // A VEVENT with a RECURRENCE-ID replaces one occurrence of the recurring
+  // event sharing its UID (RFC 5545 3.8.4.4). Collect these so the base
+  // expansion can suppress the replaced occurrences; the override events
+  // themselves render as ordinary standalone events below.
+  //
+  let overrides = {};
   for (let i = 0; i < events.length; i++) {
-    if (events[i].rrule) {
-      ics_expand_rrule_event(events[i], color, text_color, source_id, view.start, view.end);
-    } else {
-      ics_expand_event(events[i], color, text_color, source_id, view.start, view.end);
+    let ev = events[i];
+    if (ev.recurrence_id && ev.uid) {
+      let parsed = ics_parse_datetime(ev.recurrence_id.value, ev.recurrence_id.params);
+      if (parsed) {
+        if (!overrides[ev.uid]) { overrides[ev.uid] = []; }
+        overrides[ev.uid].push(parsed);
+      }
+    }
+  }
+
+  for (let i = 0; i < events.length; i++) {
+    let ev = events[i];
+    try {
+      if (ev.rrule && !ev.recurrence_id) {
+        let override_dates = (ev.uid && overrides[ev.uid]) ? overrides[ev.uid] : null;
+        ics_expand_rrule_event(ev, color, text_color, source_id, view.start, view.end, override_dates);
+      } else {
+        ics_expand_event(ev, color, text_color, source_id, view.start, view.end);
+      }
+    } catch (err) {
+      console.warn("neatocal ics: error importing event:", ev.summary || "(no title)", err);
     }
   }
 }

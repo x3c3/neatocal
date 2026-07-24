@@ -164,8 +164,11 @@ an ICS file is loaded.
 An example ICS file is located in `example/example.ics`.
 
 Notes:
-- Recurrence rules (`RRULE`) are supported for standard frequencies and intervals (`FREQ`, `INTERVAL`, `UNTIL`, `COUNT`, `BYDAY`, `BYMONTHDAY`, `BYMONTH`).
-- All-day and timed events are supported; all-day events use the end date as exclusive.
+- Recurrence rules (`RRULE`) are supported for standard frequencies and intervals (`FREQ`, `INTERVAL`, `UNTIL`, `COUNT`, `BYDAY`, `BYMONTHDAY`, `BYMONTH`, `WKST`).
+- Deleted and rescheduled instances of recurring events are honored (`EXDATE`, `RECURRENCE-ID`).
+- All-day and timed events are supported; all-day events use the end date as exclusive. Event length can be given with `DTEND` or `DURATION`.
+- Timezone identifiers (`TZID`) are ignored: times are interpreted in the browser's local timezone (UTC times are converted). Events imported from a calendar in a different timezone can land on a neighboring day.
+- A larger example exercising the recurrence features is in `example/example_rrule.ics`.
 
 
 Misc

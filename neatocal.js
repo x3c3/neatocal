@@ -1524,7 +1524,7 @@ function ics_expand_rrule_event(event, color, text_color, source_id, view_start,
   let rules = {};
   event.rrule.split(';').forEach(p => {
     let kv = p.split('=');
-    if (kv.length === 2) rules[kv[0]] = kv[1];
+    if (kv.length === 2) { rules[kv[0]] = kv[1]; }
   });
 
   let freq = rules['FREQ'];
@@ -1604,30 +1604,30 @@ function ics_expand_rrule_event(event, color, text_color, source_id, view_start,
 
   while (iter < iter_cap) {
     iter++;
-    if (until && current_date > until) break;
-    if (count !== null && occurrences >= count) break;
-    if (current_date > view_end) break;
+    if (until && current_date > until) { break; }
+    if (count !== null && occurrences >= count) { break; }
+    if (current_date > view_end) { break; }
 
     let match = true;
 
     if (freq === 'DAILY') {
       let days_diff = Math.round((current_date.getTime() - start_parsed.date.getTime()) / 86400000);
-      if (days_diff % interval !== 0) match = false;
+      if (days_diff % interval !== 0) { match = false; }
     } else if (freq === 'WEEKLY') {
       let start_day_offset = (start_parsed.date.getDay() - wkst + 7) % 7;
       let days_diff = Math.round((current_date.getTime() - start_parsed.date.getTime()) / 86400000);
       let weeks_diff = Math.floor((days_diff + start_day_offset) / 7);
-      if (weeks_diff % interval !== 0) match = false;
+      if (weeks_diff % interval !== 0) { match = false; }
     } else if (freq === 'MONTHLY') {
       let months_diff = (current_date.getFullYear() - start_parsed.date.getFullYear()) * 12 + (current_date.getMonth() - start_parsed.date.getMonth());
-      if (months_diff % interval !== 0) match = false;
+      if (months_diff % interval !== 0) { match = false; }
     } else if (freq === 'YEARLY') {
       let years_diff = current_date.getFullYear() - start_parsed.date.getFullYear();
-      if (years_diff % interval !== 0) match = false;
+      if (years_diff % interval !== 0) { match = false; }
     }
 
-    if (match && bymonth && !bymonth.includes(current_date.getMonth() + 1)) match = false;
-    if (match && (implied_month !== null) && ((current_date.getMonth() + 1) !== implied_month)) match = false;
+    if (match && bymonth && !bymonth.includes(current_date.getMonth() + 1)) { match = false; }
+    if (match && (implied_month !== null) && ((current_date.getMonth() + 1) !== implied_month)) { match = false; }
 
     if (match && bymonthday) {
       let d = current_date.getDate();
@@ -1640,10 +1640,10 @@ function ics_expand_rrule_event(event, color, text_color, source_id, view_start,
           break;
         }
       }
-      if (!md_match) match = false;
+      if (!md_match) { match = false; }
     }
-    if (match && (implied_monthday !== null) && (current_date.getDate() !== implied_monthday)) match = false;
-    if (match && (implied_weekday !== null) && (current_date.getDay() !== implied_weekday)) match = false;
+    if (match && (implied_monthday !== null) && (current_date.getDate() !== implied_monthday)) { match = false; }
+    if (match && (implied_weekday !== null) && (current_date.getDay() !== implied_weekday)) { match = false; }
 
     if (match && byday) {
       let d_str = Object.keys(day_map).find(key => day_map[key] === current_date.getDay());
@@ -1671,7 +1671,7 @@ function ics_expand_rrule_event(event, color, text_color, source_id, view_start,
           }
         }
       }
-      if (!has_day_match) match = false;
+      if (!has_day_match) { match = false; }
     }
 
     if (match) {
@@ -1813,10 +1813,10 @@ function ics_remove_calendar(source_id) {
   let keys = Object.keys(NEATOCAL_PARAM.data);
   for (let k = 0; k < keys.length; k++) {
     let key = keys[k];
-    if (key === '__base') continue;
+    if (key === '__base') { continue; }
     
     let val = NEATOCAL_PARAM.data[key];
-    if (!Array.isArray(val)) continue;
+    if (!Array.isArray(val)) { continue; }
 
     let filtered_val = val.filter(function(event) {
       return event.source_id !== source_id;

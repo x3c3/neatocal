@@ -347,27 +347,237 @@ function get_view_range() {
 
 
 // Moon phase calculation functions
-// Reference: Known new moon on Jan 6, 2000, 18:14 UTC (Julian Day 2451550.26)
+//
+// The exact instants of the four principal phases (new moon, first quarter,
+// full moon, last quarter) are computed with the truncated periodic series
+// from Meeus' "Astronomical Algorithms"
+//
+const MOON_SYNODIC_MONTH = 29.530588861;
+
+function moon_deg2rad(d) { return d * Math.PI / 180.0; }
+
+// Difference between Terrestrial Dynamical Time and Universal Time, in
+// seconds. Meeus' phase series yields TDT, but calendar days are UT, and the
+// two differ by around 70 seconds at the moment. That is only enough to matter
+// when a phase falls within a minute or two of midnight, but without it those
+// cases land on the wrong day, always in the same direction
+//
+function moon_delta_t(year) {
+  let t, u;
+
+  if ((year >= 1900) && (year < 1920)) {
+    t = year - 1900;
+    return -2.79 + (1.494119*t) - (0.0598939*t*t) + (0.0061966*t*t*t) - (0.000197*t*t*t*t);
+  }
+
+  if ((year >= 1920) && (year < 1941)) {
+    t = year - 1920;
+    return 21.20 + (0.84493*t) - (0.076100*t*t) + (0.0020936*t*t*t);
+  }
+
+  if ((year >= 1941) && (year < 1961)) {
+    t = year - 1950;
+    return 29.07 + (0.407*t) - ((t*t)/233) + ((t*t*t)/2547);
+  }
+
+  if ((year >= 1961) && (year < 1986)) {
+    t = year - 1975;
+    return 45.45 + (1.067*t) - ((t*t)/260) - ((t*t*t)/718);
+  }
+
+  if ((year >= 1986) && (year < 2005)) {
+    t = year - 2000;
+    return 63.86 + (0.3345*t) - (0.060374*t*t) + (0.0017275*t*t*t)
+         + (0.000651814*t*t*t*t) + (0.00002373599*t*t*t*t*t);
+  }
+
+  if ((year >= 2005) && (year < 2050)) {
+    t = year - 2000;
+    return 62.92 + (0.32217*t) + (0.005589*t*t);
+  }
+
+  if ((year >= 2050) && (year <= 2150)) {
+    u = (year - 1820) / 100;
+    return -20 + (32*u*u) - (0.5628 * (2150 - year));
+  }
+
+  u = (year - 1820) / 100;
+  return -20 + (32*u*u);
+}
+
+// Julian Ephemeris Day of a phase instant.
+//
+//   k       - lunation number, 0 == the new moon of 2000 Jan 6
+//   quarter - 0 new moon, 1 first quarter, 2 full moon, 3 last quarter
+//
+function moon_phase_jde(k, quarter) {
+  k = k + (quarter * 0.25);
+
+  let T  = k / 1236.85;
+  let T2 = T*T, T3 = T2*T, T4 = T3*T;
+
+  let jde = 2451550.09766 + (MOON_SYNODIC_MONTH * k)
+          + (0.00015437 * T2)
+          - (0.000000150 * T3)
+          + (0.00000000073 * T4);
+
+  // eccentricity correction of the earth's orbit
+  //
+  let E = 1.0 - (0.002516 * T) - (0.0000074 * T2);
+
+  // M  - sun's mean anomaly
+  // Mp - moon's mean anomaly
+  // F  - moon's argument of latitude
+  // Om - longitude of the ascending node
+  //
+  let M  = 2.5534   + (29.10535670 * k)  - (0.0000014 * T2) - (0.00000011 * T3);
+  let Mp = 201.5643 + (385.81693528 * k) + (0.0107582 * T2) + (0.00001238 * T3) - (0.000000058 * T4);
+  let F  = 160.7108 + (390.67050284 * k) - (0.0016118 * T2) - (0.00000227 * T3) + (0.000000011 * T4);
+  let Om = 124.7746 - (1.56375588 * k)   + (0.0020672 * T2) + (0.00000215 * T3);
+
+  M  = moon_deg2rad(M);
+  Mp = moon_deg2rad(Mp);
+  F  = moon_deg2rad(F);
+  Om = moon_deg2rad(Om);
+
+  let sin = Math.sin, cos = Math.cos;
+  let corr = 0;
+
+  if (quarter === 0) {
+    corr = -0.40720 * sin(Mp)
+         + 0.17241 * E * sin(M)
+         + 0.01608 * sin(2*Mp)
+         + 0.01039 * sin(2*F)
+         + 0.00739 * E * sin(Mp - M)
+         - 0.00514 * E * sin(Mp + M)
+         + 0.00208 * E * E * sin(2*M)
+         - 0.00111 * sin(Mp - 2*F)
+         - 0.00057 * sin(Mp + 2*F)
+         + 0.00056 * E * sin(2*Mp + M)
+         - 0.00042 * sin(3*Mp)
+         + 0.00042 * E * sin(M + 2*F)
+         + 0.00038 * E * sin(M - 2*F)
+         - 0.00024 * E * sin(2*Mp - M)
+         - 0.00017 * sin(Om)
+         - 0.00007 * sin(Mp + 2*M);
+  }
+
+  else if (quarter === 2) {
+    corr = -0.40614 * sin(Mp)
+         + 0.17302 * E * sin(M)
+         + 0.01614 * sin(2*Mp)
+         + 0.01043 * sin(2*F)
+         + 0.00734 * E * sin(Mp - M)
+         - 0.00515 * E * sin(Mp + M)
+         + 0.00209 * E * E * sin(2*M)
+         - 0.00111 * sin(Mp - 2*F)
+         - 0.00057 * sin(Mp + 2*F)
+         + 0.00056 * E * sin(2*Mp + M)
+         - 0.00042 * sin(3*Mp)
+         + 0.00042 * E * sin(M + 2*F)
+         + 0.00038 * E * sin(M - 2*F)
+         - 0.00024 * E * sin(2*Mp - M)
+         - 0.00017 * sin(Om)
+         - 0.00007 * sin(Mp + 2*M);
+  }
+
+  else {
+    corr = -0.62801 * sin(Mp)
+         + 0.17172 * E * sin(M)
+         - 0.01183 * E * sin(Mp + M)
+         + 0.00862 * sin(2*Mp)
+         + 0.00804 * sin(2*F)
+         + 0.00454 * E * sin(Mp - M)
+         + 0.00204 * E * E * sin(2*M)
+         - 0.00180 * sin(Mp - 2*F)
+         - 0.00070 * sin(Mp + 2*F)
+         - 0.00040 * sin(3*Mp)
+         - 0.00034 * E * sin(2*Mp - M)
+         + 0.00032 * E * sin(M + 2*F)
+         + 0.00032 * E * sin(M - 2*F)
+         - 0.00028 * E * E * sin(Mp + 2*M)
+         + 0.00027 * E * sin(2*Mp + M)
+         - 0.00017 * sin(Om);
+
+    let W = 0.00306
+          - 0.00038 * E * cos(M)
+          + 0.00026 * cos(Mp)
+          - 0.00002 * cos(Mp - M)
+          + 0.00002 * cos(Mp + M)
+          + 0.00002 * cos(2*F);
+
+    corr += ((quarter === 1) ? W : -W);
+  }
+
+  return jde + corr;
+}
+
+// Phase instants get looked up repeatedly while filling in cells, so memoize
+// them. A full year of cells touches only a couple of dozen entries.
+//
+const MOON_PHASE_INSTANT_CACHE = {};
+
+// Unix epoch milliseconds of a phase instant.
+//
+function moon_phase_instant(k, quarter) {
+  let key = k.toString() + ":" + quarter.toString();
+  if (!(key in MOON_PHASE_INSTANT_CACHE)) {
+    let jde = moon_phase_jde(k, quarter);
+    let ms  = Math.round((jde - 2440587.5) * 86400000);
+
+    // TDT -> UT
+    //
+    let year = new Date(ms).getUTCFullYear();
+    ms -= Math.round(moon_delta_t(year) * 1000);
+
+    MOON_PHASE_INSTANT_CACHE[key] = ms;
+  }
+  return MOON_PHASE_INSTANT_CACHE[key];
+}
+
+// Approximate lunation number for a year/month. There are about 12.3685
+// lunations in a year, so this is within one of the true value, and callers
+// scan a small window around it.
+//
+function moon_lunation_index(year, month) {
+  return Math.floor((year + ((month + 0.5) / 12) - 2000) * 12.3685);
+}
+
+// If a principal phase instant falls inside the given local calendar day,
+// return its phase index (0 new, 2 first quarter, 4 full, 6 last quarter).
+// Otherwise return -1.
+//
+// Day boundaries are local, so the calendar marks the phase on the day an
+// observer in the browser's timezone would see it. Constructing both bounds
+// from local date components keeps this correct across DST transitions.
+//
+function moon_principal_phase_on_day(year, month, day) {
+  let day_start = new Date(year, month, day,     0, 0, 0, 0).getTime();
+  let day_end   = new Date(year, month, day + 1, 0, 0, 0, 0).getTime();
+
+  let k0 = moon_lunation_index(year, month);
+
+  for (let dk = -1; dk <= 1; dk++) {
+    for (let q = 0; q < 4; q++) {
+      let t = moon_phase_instant(k0 + dk, q);
+      if ((t >= day_start) && (t < day_end)) { return q * 2; }
+    }
+  }
+
+  return -1;
+}
+
+// Days elapsed since the most recent true new moon, sampled at local noon so
+// the value reflects the bulk of the day rather than its first instant.
 //
 function calculateLunarAge(year, month, day) {
+  let t = new Date(year, month, day, 12, 0, 0, 0).getTime();
+  let k = moon_lunation_index(year, month);
 
-  // Calculate days since reference new moon (Jan 6, 2000)
-  //
-  let refDate = new Date(Date.UTC(2000, 0, 6, 18, 14, 0));
-  let targetDate = new Date(Date.UTC(year, month, day, 0, 0, 0));
+  while (moon_phase_instant(k, 0) > t)      { k -= 1; }
+  while (moon_phase_instant(k + 1, 0) <= t) { k += 1; }
 
-  let daysSince = (targetDate - refDate) / (1000 * 60 * 60 * 24);
-
-  // Lunar synodic period (new moon to new moon)
-  //
-  let lunarCycle = 29.53058867;
-
-  // Calculate lunar age (days since last new moon)
-  //
-  let lunarAge = daysSince % lunarCycle;
-  if (lunarAge < 0) { lunarAge += lunarCycle; }
-
-  return lunarAge;
+  return (t - moon_phase_instant(k, 0)) / 86400000;
 }
 
 function getMoonPhase(lunarAge) {
@@ -376,15 +586,14 @@ function getMoonPhase(lunarAge) {
   // 0: New Moon, 1: Waxing Crescent, 2: First Quarter, 3: Waxing Gibbous
   // 4: Full Moon, 5: Waning Gibbous, 6: Last Quarter, 7: Waning Crescent
   //
-  let phase = Math.round((lunarAge / 29.53058867) * 8) % 8;
+  let phase = Math.round((lunarAge / MOON_SYNODIC_MONTH) * 8) % 8;
 
   return phase;
 }
 
 function getMoonIllumination(lunarAge) {
   // Returns illumination percentage 0-100
-  let cycle = 29.53058867;
-  let percent = ((1 - Math.cos((lunarAge / cycle) * 2 * Math.PI)) / 2) * 100;
+  let percent = ((1 - Math.cos((lunarAge / MOON_SYNODIC_MONTH) * 2 * Math.PI)) / 2) * 100;
   return Math.round(percent);
 }
 
@@ -457,21 +666,18 @@ function renderMoonPhase(td, year, month, day) {
   if (!NEATOCAL_PARAM.show_moon_phase) { return; }
 
   let lunarAge = calculateLunarAge(year, month, day);
-  let phase = getMoonPhase(lunarAge);
+  let phase;
 
-  // If only showing phase changes, check if phase is different from previous day
-  //
   if (NEATOCAL_PARAM.moon_phase_display === "changes") {
 
-    // Calculate previous day
+    // Mark only the days that actually contain a principal phase instant
     //
-    let prevDate = new Date(year, month, day - 1);
-    let prevLunarAge = calculateLunarAge(prevDate.getFullYear(), prevDate.getMonth(), prevDate.getDate());
-    let prevPhase = getMoonPhase(prevLunarAge);
+    phase = moon_principal_phase_on_day(year, month, day);
+    if (phase < 0) { return; }
+  }
 
-    // Skip if phase hasn't changed
-    //
-    if (phase === prevPhase) { return; }
+  else {
+    phase = getMoonPhase(lunarAge);
   }
 
   let moonElement;
